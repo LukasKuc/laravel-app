@@ -1,0 +1,73 @@
+version: '3'
+services:
+
+  #Nginx Service
+  web:
+    image: nginx
+    container_name: web
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "8080:80"
+    networks:
+      - app-network
+    volumes:
+      - ./:/var/www
+      - ./nginx/conf.d/:/etc/nginx/conf.d/
+
+  #MariaDB Service
+  database:
+    image: mariadb
+    container_name: database
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "33060:3306"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: root
+    networks:
+      - app-network
+    volumes:
+      - dbdata:/var/lib/mysql
+
+  #phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - "81:80"
+    environment:
+      PMA_HOST: database
+      PMA_PORT: 3306
+    networks:
+      - app-network
+    depends_on:
+      - database
+
+  #PHP Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: digitalocean.com/php
+    container_name: app
+    restart: unless-stopped
+    tty: true
+    environment:
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    networks:
+      - app-network
+    volumes:
+      - ./:/var/www
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  dbdata:
